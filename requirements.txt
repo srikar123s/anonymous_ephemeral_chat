@@ -1,0 +1,15 @@
+# Anonymous & Ephemeral Chat Application Requirements
+# Core cryptography library for encryption and key management
+cryptography>=41.0.0
+
+# Optional: For better random number generation (usually built-in)
+# secrets (built-in Python 3.6+)
+
+# Optional: For enhanced networking (if needed)
+# requests>=2.31.0
+
+# Development dependencies (optional)
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=23.0.0
+flake8>=6.0.0
