@@ -1,22 +1,79 @@
-## Anonymous & Ephemeral Chat Application
+# Anonymous & Ephemeral Chat Application
 
 🔐 A proof-of-concept for secure, private communication that prioritizes user anonymity and data minimization.
 
-## 🎯 Overview
+## 1. Overview
 
 The Anonymous & Ephemeral Chat Application is a peer-to-peer messaging system that eliminates permanent data storage and implements true anonymity through temporary cryptographic identities. Unlike traditional messaging apps that store data on servers, this application keeps everything in RAM and automatically destroys all traces when closed.
 
-## ✨ Key Features
+## 2. Problem Statement
+
+Traditional messaging applications often depend on centralized servers, persistent user accounts, databases, and metadata collection. This project explores a decentralized alternative where peers communicate directly, messages are encrypted end-to-end, and session data is not intentionally persisted.
+
+## 3. Objectives
+
+- Provide private peer-to-peer text communication.
+- Generate temporary cryptographic identities for each session.
+- Protect messages using modern key exchange and authenticated encryption.
+- Minimize stored data by keeping messages and keys in memory only.
+- Provide both command-line and desktop GUI interfaces.
+
+## 4. Key Features
 
 - **🔒 True Anonymity**: New cryptographic identity generated for each session
 - **⏰ Ephemeral Data**: All messages stored only in RAM, automatically destroyed
-- **🔐 End-to-End Encryption**: AES-256 encryption with ECDH key exchange
+- **🔐 End-to-End Encryption**: AES-256-GCM encryption with ECDH key exchange
 - **🌐 Peer-to-Peer**: Direct connections, no central servers
 - **🛡️ Perfect Forward Secrecy**: Each session uses unique encryption keys
 - **💾 Zero Persistence**: No data written to disk or databases
 - **🗑️ Self-Destruction**: All traces removed when application closes
 
-## 🚀 Quick Start 
+## 5. Screenshots & Demo
+
+No screenshots are currently included. A two-node demonstration is available:
+
+```bash
+python examples/demo_session.py
+```
+
+For a manual demo, start two nodes on different ports, connect them with `/connect`, and exchange messages.
+
+## 6. System Architecture
+
+The application consists of a CLI or Tkinter GUI, an `EphemeralChatNode` backend, a cryptographic layer, and a TCP networking layer. Each peer derives a shared session key during connection setup and exchanges encrypted length-prefixed messages directly.
+
+```text
+CLI / Tkinter GUI
+        |
+EphemeralChatNode
+  |     |       |
+Crypto  TCP   RAM-only state
+        |
+   Encrypted peer
+```
+
+The detailed architecture is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## 7. Technology Stack
+
+- **Language:** Python 3.8+
+- **Cryptography:** `cryptography`
+- **Key exchange:** ECDH with SECP256R1
+- **Key derivation:** HKDF-SHA256
+- **Message encryption:** AES-256-GCM
+- **Networking:** Python TCP sockets
+- **Concurrency:** Python `threading`
+- **GUI:** Tkinter
+- **Testing:** pytest and unittest
+- **Packaging:** setuptools
+
+## 8. Project Structure
+
+See the complete file layout in the [Project Structure](#-project-structure) section below.
+
+## 9. Installation & Setup
+
+### Quick Start
 
 ### Prerequisites
 
@@ -64,7 +121,17 @@ pip install -r requirements.txt
 python src/ephemeral_chat.py
 ```
 
-## 🔧 Usage
+## 10. Environment Configuration
+
+The application does not require environment variables, a database, or an external service. Configuration is supplied through command-line arguments:
+
+- `--port`: Listening port; the default is `13377`.
+- `--username`: Optional session username. If omitted, an anonymous username is generated.
+- `--no-gui`: Run the command-line interface instead of the GUI.
+
+## 11. Running the Application
+
+### Usage
 
 ### Starting a Chat Node
 
@@ -129,7 +196,26 @@ alice> Hi Bob! No traces will remain after we close the app.
 📤 Message sent to 127.0.0.1:54321
 ```
 
-## 🏗️ Architecture
+## 12. API Documentation
+
+The main public class is `EphemeralChatNode`. Its constructor, connection methods, messaging methods, and cleanup lifecycle are documented in [docs/API.md](docs/API.md).
+
+## 13. Dataset & Data Sources
+
+This is a communication application and does not use a training dataset or external data source. User messages are generated at runtime and retained only in process memory during an active session.
+
+## 14. Methodology & Implementation
+
+1. Generate a temporary SECP256R1 key pair when a node starts.
+2. Exchange public keys over a TCP connection.
+3. Derive a 32-byte session key using ECDH and HKDF-SHA256.
+4. Serialize message content and session metadata as JSON.
+5. Encrypt each message with AES-GCM using a fresh random nonce.
+6. Send the encrypted payload using a length-prefixed protocol.
+7. Decrypt and display messages at the receiving peer.
+8. Close sockets and clear session collections during cleanup.
+
+## 🏗️ Detailed Architecture
 
 ### Core Components
 
@@ -164,10 +250,24 @@ alice> Hi Bob! No traces will remain after we close the app.
 1. **Identity Generation**: Temporary ECDH key pair created in RAM
 2. **Peer Discovery**: Manual connection using IP:Port
 3. **Key Exchange**: ECDH protocol establishes shared secret
-4. **Message Encryption**: AES-256-CFB with random IV per message
+4. **Message Encryption**: AES-256-GCM with a fresh random nonce per message
 5. **Transmission**: Encrypted data sent over TCP socket
 6. **Reception**: Decrypt using session key, display, store in RAM
 7. **Cleanup**: All data automatically destroyed on exit
+
+## 15. Results & Evaluation
+
+- Cryptographic and networking tests currently pass with `17 passed`.
+- Tests cover key generation, ECDH agreement, encryption/decryption, tamper detection, peer connections, multi-peer connections, and cleanup.
+- Session keys are 32 bytes (256 bits).
+- AES-GCM uses a 12-byte nonce for each encrypted message.
+- No application database or intentional message file storage is used.
+
+Run the test suite with:
+
+```bash
+python -m pytest tests/ -v
+```
 
 ## 🔒 Security Features
 
@@ -175,7 +275,7 @@ alice> Hi Bob! No traces will remain after we close the app.
 
 - **Key Generation**: SECP256R1 elliptic curve (256-bit security)
 - **Key Exchange**: Elliptic Curve Diffie-Hellman (ECDH)
-- **Encryption**: AES-256 in CFB mode
+- **Encryption**: AES-256-GCM with authenticated encryption
 - **Key Derivation**: HKDF with SHA-256
 - **Random Generation**: Cryptographically secure random numbers
 
@@ -238,7 +338,9 @@ python tests/test_security.py
 ```
 anonymous_ephemeral_chat/
 ├── src/
-│   └── ephemeral_chat.py      # Main application code
+│   ├── ephemeral_chat.py      # Main application code
+│   ├── ephemeral_chat_gui.py  # Tkinter GUI
+│   └── __init__.py
 ├── examples/
 │   ├── demo_session.py        # Demo script for testing
 │   └── network_test.py        # Network connectivity test
@@ -252,9 +354,24 @@ anonymous_ephemeral_chat/
 │   └── API.md                # API documentation
 ├── requirements.txt           # Python dependencies
 ├── setup.py                  # Installation script
+├── quick_start.py             # Dependency check and launcher
+├── SETUP.md                   # Setup instructions
 ├── README.md                 # This file
 └── LICENSE                   # MIT License
 ```
+
+## 16. Limitations
+
+This is an educational proof of concept and has not undergone a professional security audit. It does not provide complete network anonymity, automated peer authentication, NAT traversal, offline messaging, or group-key management. Python memory cleanup also cannot guarantee immediate physical erasure of every sensitive object.
+
+## 17. Future Scope
+
+- Add automated authenticated peer verification.
+- Support Tor, I2P, or relay-based anonymous routing.
+- Add NAT traversal and secure peer discovery.
+- Replace per-peer threads with an asynchronous networking model.
+- Add bounded message buffers and stronger memory handling.
+- Support group messaging, file transfer, and optional mobile clients.
 
 ## ⚠️ Important Security Notes
 
@@ -277,6 +394,16 @@ This is a **proof-of-concept** implementation for educational and research purpo
 - Regular security audits and code reviews
 - Consider hardware security modules for key generation
 
+## 18. Contributing
+
+Contributions are welcome. Please add tests for new functionality, preserve the project’s security assumptions, and document behavior changes.
+
+1. Fork the repository.
+2. Create a feature branch.
+3. Implement and test your change.
+4. Run formatting, linting, and relevant tests.
+5. Submit a pull request.
+
 ## 🛠️ Development
 
 ### Code Style
@@ -287,13 +414,6 @@ black src/ tests/ examples/
 # Lint code
 flake8 src/ tests/ examples/
 ```
-
-### Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
 
 ### Building from Source
 ```bash
@@ -360,11 +480,13 @@ python src/ephemeral_chat.py --port 8000
 python src/ephemeral_chat.py --debug
 ```
 
-## 📄 License
+## 19. License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🤝 Acknowledgments
+## 20. Authors & Acknowledgements
+
+**Authors:** Privacy Research Team
 
 - **Cryptography Library**: Python Cryptographic Authority
 - **Elliptic Curve Cryptography**: Victor Miller and Neal Koblitz
